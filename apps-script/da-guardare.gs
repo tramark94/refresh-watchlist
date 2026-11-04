@@ -25,7 +25,7 @@ const CANALI = [
   { nome: 'Breaking Italy', id: 'UC4V3oCikXeSqYQr0hBMARwg' },
   { nome: 'Charles Cornell', id: 'UC4PIiYewI1YGyiZvgNlJNrA' },
   { nome: 'Cydonia', id: 'UClVZYutBmlVLvmGw27hL_9Q' },
-  { nome: 'EthosLab', id: 'UCFKDEp9si4RmHFWJW1vYsMA' },
+  { nome: 'EthosLab', id: 'UCFKDEp9si4RmHFWJW1vYsMA', playlist: 'PLaAVDbMg_XArcet5lwcRo12Fh9JrGKydh' },  // Etho Plays Minecraft S2
   { nome: 'Francesco Costa', id: 'UCWIkgZzXznmBgU9uQsvjZAQ' },
   { nome: 'I Termosifoni', id: 'UCIASBGI8NRtvyvcDewznHXw' },
   { nome: 'Il Matthew del Tubo', id: 'UCpF62eV02XJpqJxBZAcsDCw' },
