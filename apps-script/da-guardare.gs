@@ -104,7 +104,8 @@ function aggiorna() {
   const nuovi = [];
 
   for (const c of CANALI) {
-    const sorgente = c.playlist || 'UU' + c.id.slice(2); // UU... = tutti i caricamenti
+    // UULF... = caricamenti del canale senza Shorts e dirette
+    const sorgente = c.playlist || 'UULF' + c.id.slice(2);
     let items;
     try {
       items = yt_('get', 'playlistItems', { part: 'snippet,contentDetails', playlistId: sorgente, maxResults: 15 }).items || [];
@@ -118,11 +119,12 @@ function aggiorna() {
       if (!vid || visti.has(vid) || giaInPlaylist.has(vid)) continue;
       if (data < START_DATE) { visti.add(vid); continue; }
       if (c.filtro && !c.filtro.test(it.snippet.title)) { visti.add(vid); continue; }
-      nuovi.push({ vid, data, canale: c.nome, titolo: it.snippet.title });
+      nuovi.push({ vid, data, canale: c.nome, titolo: it.snippet.title, chId: c.id, daPlaylist: !!c.playlist });
     }
   }
 
-  // dettagli dei candidati: scarta Shorts, dirette e premiere non ancora uscite
+  // dettagli dei candidati: scarta dirette e premiere non ancora uscite;
+  // per i canali filtrati per playlist scarta anche gli Shorts
   const ok = [];
   for (let i = 0; i < nuovi.length; i += 50) {
     const blocco = nuovi.slice(i, i + 50);
@@ -133,8 +135,8 @@ function aggiorna() {
       const d = byId[n.vid];
       if (!d) continue; // privato o non ancora disponibile: riprova al prossimo giro
       if (d.snippet.liveBroadcastContent !== 'none') continue; // diretta/premiere: riprova più tardi
+      if (n.daPlaylist && !videoNormale_(n.chId, n.vid)) continue; // Short, o non ancora indicizzato: riprova più tardi
       visti.add(n.vid);
-      if (isShort_(n.vid, secondi_(d.contentDetails.duration))) continue;
       ok.push(n);
     }
   }
@@ -169,19 +171,12 @@ function idInPlaylist_(pid) {
   return s;
 }
 
-function secondi_(iso) {
-  const m = iso.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/) || [];
-  return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
-}
-
-/** Gli Shorts durano al massimo 3 minuti e si aprono su /shorts/ senza redirect. */
-function isShort_(vid, durata) {
-  if (durata > 180) return false;
-  if (durata <= 60) return true;
+/** Vero se il video compare tra i caricamenti "lunghi" del canale (UULF): non è uno Short né una diretta. */
+function videoNormale_(chId, vid) {
   try {
-    const r = UrlFetchApp.fetch('https://www.youtube.com/shorts/' + vid, { followRedirects: false, muteHttpExceptions: true });
-    return r.getResponseCode() === 200;
+    const r = yt_('get', 'playlistItems', { part: 'id', playlistId: 'UULF' + chId.slice(2), videoId: vid });
+    return (r.items || []).length > 0;
   } catch (e) {
-    return true; // nel dubbio meglio non aggiungerlo
+    return false; // nel dubbio meglio non aggiungerlo
   }
 }
