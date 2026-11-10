@@ -104,14 +104,16 @@ function aggiorna() {
   const nuovi = [];
 
   for (const c of CANALI) {
-    // UULF... = caricamenti del canale senza Shorts e dirette
-    const sorgente = c.playlist || 'UULF' + c.id.slice(2);
-    let items;
-    try {
-      items = yt_('get', 'playlistItems', { part: 'snippet,contentDetails', playlistId: sorgente, maxResults: 15 }).items || [];
-    } catch (e) {
-      console.warn(c.nome + ': ' + e.message);
-      continue;
+    // UULF... = video normali (senza Shorts e dirette); UUMF... = gli stessi, riservati agli abbonati
+    const sorgenti = c.playlist ? [c.playlist] : ['UULF' + c.id.slice(2), 'UUMF' + c.id.slice(2)];
+    let items = [];
+    for (const sorgente of sorgenti) {
+      try {
+        items = items.concat(yt_('get', 'playlistItems', { part: 'snippet,contentDetails', playlistId: sorgente, maxResults: 15 }).items || []);
+      } catch (e) {
+        if (sorgente.startsWith('UUMF')) continue; // il canale non ha video per abbonati
+        console.warn(c.nome + ': ' + e.message);
+      }
     }
     for (const it of items) {
       const vid = it.contentDetails.videoId;
@@ -171,12 +173,15 @@ function idInPlaylist_(pid) {
   return s;
 }
 
-/** Vero se il video compare tra i caricamenti "lunghi" del canale (UULF): non è uno Short né una diretta. */
+/** Vero se il video è tra i video normali del canale, pubblici (UULF) o per abbonati (UUMF): non è uno Short né una diretta. */
 function videoNormale_(chId, vid) {
-  try {
-    const r = yt_('get', 'playlistItems', { part: 'id', playlistId: 'UULF' + chId.slice(2), videoId: vid });
-    return (r.items || []).length > 0;
-  } catch (e) {
-    return false; // nel dubbio meglio non aggiungerlo
+  for (const pre of ['UULF', 'UUMF']) {
+    try {
+      const r = yt_('get', 'playlistItems', { part: 'id', playlistId: pre + chId.slice(2), videoId: vid });
+      if ((r.items || []).length > 0) return true;
+    } catch (e) {
+      // elenco inesistente per questo canale: prova il successivo
+    }
   }
+  return false; // nel dubbio meglio non aggiungerlo
 }
